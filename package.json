@@ -1,0 +1,10 @@
+{
+  "name": "jax420-chat-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openai": "^4.55.0",
+    "cors": "^2.8.5"
+  }
+}
