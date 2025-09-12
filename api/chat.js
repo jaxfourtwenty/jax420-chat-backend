@@ -20,7 +20,14 @@ export default async function handler(req, res) {
   const allow = ALLOWED_ORIGINS.some(p =>
     origin === p || (p.includes("*") && origin.endsWith(p.replace("*.", "")))
   );
-  const headers = corsHeaders(allow ? origin : "*");
+  // Define res.set for Vercel compatibility
+res.set = (headersObj) => {
+  for (const [k, v] of Object.entries(headersObj)) {
+    res.setHeader(k, v);
+  }
+  return res;
+};
+
 
   if (req.method === "OPTIONS") {
     res.set(headers).status(204).send("");
