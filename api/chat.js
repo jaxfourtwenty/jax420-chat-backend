@@ -27,10 +27,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (req.method !== "POST") {
-    res.set(headers).status(405).json({ error: "Method not allowed" });
-    return;
+if (req.method === "OPTIONS") {
+  for (const [k, v] of Object.entries(headers)) {
+    res.setHeader(k, v);
   }
+  res.status(204).end();
+  return;
+}
 
   try {
     const { messages } = req.body || {};
@@ -64,6 +67,10 @@ export default async function handler(req, res) {
     res.set(headers).status(200).json({ reply });
   } catch (err) {
     console.error(err);
-    res.set(headers).status(500).json({ error: "Server error." });
+    for (const [k, v] of Object.entries(headers)) {
+  res.setHeader(k, v);
+}
+res.status(500).json({ error: "Server error." });
+
   }
 }
