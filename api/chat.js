@@ -1,46 +1,46 @@
 import OpenAI from "openai";
 
-// Allow simple CORS (add your domain below)
 const ALLOWED_ORIGINS = [
   "https://jax420.com",
   "https://*.carrd.co"
 ];
 
-// Utility CORS headers
+// Utility function to build CORS headers
 function corsHeaders(origin) {
   return {
-    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
   };
 }
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
+  // Determine the request origin and whether it's allowed
+  const origin = req.headers.origin || "*";
   const allow = ALLOWED_ORIGINS.some(p =>
     origin === p || (p.includes("*") && origin.endsWith(p.replace("*.", "")))
   );
-  // Define res.set for Vercel compatibility
-res.set = (headersObj) => {
-  for (const [k, v] of Object.entries(headersObj)) {
-    res.setHeader(k, v);
-  }
-  return res;
-};
+  const headers = corsHeaders(allow ? origin : "*");
 
+  // Polyfill res.set so that res.set(headers) works on Vercel
+  res.set = (headersObj) => {
+    for (const [k, v] of Object.entries(headersObj)) {
+      res.setHeader(k, v);
+    }
+    return res;
+  };
 
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    res.set(headers).status(204).send("");
+    res.set(headers).status(204).end();
     return;
   }
 
-if (req.method === "OPTIONS") {
-  for (const [k, v] of Object.entries(headers)) {
-    res.setHeader(k, v);
+  // Only allow POST requests
+  if (req.method !== "POST") {
+    res.set(headers).status(405).json({ error: "Method not allowed" });
+    return;
   }
-  res.status(204).end();
-  return;
-}
 
   try {
     const { messages } = req.body || {};
@@ -49,7 +49,7 @@ if (req.method === "OPTIONS") {
       return;
     }
 
-    // System guardrail for JAX 420 tone & safety
+    // System prompt to keep the assistant on-brand
     const systemMsg = {
       role: "system",
       content:
@@ -60,7 +60,7 @@ if (req.method === "OPTIONS") {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // Use Responses API for simplicity; you can switch models any time
+    // Use OpenAI Responses API for simplicity
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       input: [systemMsg, ...messages]
@@ -74,10 +74,6 @@ if (req.method === "OPTIONS") {
     res.set(headers).status(200).json({ reply });
   } catch (err) {
     console.error(err);
-    for (const [k, v] of Object.entries(headers)) {
-  res.setHeader(k, v);
-}
-res.status(500).json({ error: "Server error." });
-
+    res.set(headers).status(500).json({ error: "Server error." });
   }
 }
